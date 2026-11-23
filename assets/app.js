@@ -1,7 +1,7 @@
 
 const API_BASE = "https://edusphere-backend-1-v78v.onrender.com";
 
-// ---------- ELEMENTS ----------
+// ELEMENTS
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const examFilter = document.getElementById("examFilter");
@@ -21,11 +21,9 @@ const adminRoot = document.getElementById("adminRoot");
 const loginForm = document.getElementById("loginForm");
 const loginMessage = document.getElementById("loginMessage");
 
-// ---------- DATA ----------
 let allPapers = [];
 let filteredPapers = [];
 
-// ---------- HELPERS ----------
 function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -37,7 +35,10 @@ function escapeHTML(value) {
 }
 
 function normalize(value) {
-    return String(value ?? "").trim().toLowerCase();
+    return String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, "-");
 }
 
 function getExamName(exam) {
@@ -47,17 +48,19 @@ function getExamName(exam) {
         "neet": "NEET",
         "cbse": "CBSE",
         "isc-12": "ISC Class 12",
-        "icse-10": "ICSE Class 10"
+        "isc": "ISC",
+        "icse-10": "ICSE Class 10",
+        "icse": "ICSE"
     };
 
     return names[normalize(exam)] || exam || "Other";
 }
 
 function getPaperURL(paper) {
-    return `${API_BASE}/api/papers/${encodeURIComponent(paper.id)}/file/`;
+    return `${API_BASE}/api/papers/${encodeURIComponent(paper.id)}/file`;
 }
 
-// ---------- LOAD PAPERS ----------
+// LOAD PAPERS
 async function loadPapers() {
     try {
         resultCount.textContent = "Loading papers...";
@@ -66,51 +69,58 @@ async function loadPapers() {
         const response = await fetch(`${API_BASE}/api/papers/`);
 
         if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
+            throw new Error(`Server error: ${response.status}`);
         }
 
         const data = await response.json();
 
+        // Handle different API response formats
         allPapers = Array.isArray(data)
             ? data
-            : data.papers || data.items || data.results || [];
+            : Array.isArray(data.papers)
+                ? data.papers
+                : Array.isArray(data.items)
+                    ? data.items
+                    : Array.isArray(data.results)
+                        ? data.results
+                        : [];
+
+        console.log("EduSphere papers received:", allPapers.length);
+        console.log("First paper:", allPapers[0]);
+
+        if (allPapers.length === 0) {
+            resultCount.textContent = "0 papers found";
+            paperGrid.innerHTML = "<p class='muted'>The archive is currently empty.</p>";
+            return;
+        }
 
         populateFilters();
         applyFilters();
 
     } catch (error) {
-        console.error("EduSphere loading error:", error);
-
+        console.error("EduSphere error:", error);
         resultCount.textContent = "Unable to load papers";
-
         paperGrid.innerHTML = `
             <p class="muted">
-                Could not connect to the paper archive.
-                Please refresh and try again.
+                Could not connect to the archive.
+                Please try again later.
             </p>
         `;
     }
 }
 
-// ---------- FILTER OPTIONS ----------
+// FILTER OPTIONS
 function populateFilters() {
-    const selectedSubject = subjectFilter.value;
-    const selectedYear = yearFilter.value;
-
     const subjects = [...new Set(
-        allPapers
-            .map(paper => paper.subject)
-            .filter(Boolean)
-    )].sort((a, b) => a.localeCompare(b));
+        allPapers.map(p => p.subject).filter(Boolean)
+    )].sort();
 
     const years = [...new Set(
-        allPapers
-            .map(paper => String(paper.year))
-            .filter(Boolean)
+        allPapers.map(p => p.year).filter(Boolean).map(String)
     )].sort((a, b) => Number(b) - Number(a));
 
-    subjectFilter.innerHTML =
-        '<option value="">All subjects</option>';
+    subjectFilter.innerHTML = '<option value="">All subjects</option>';
+    yearFilter.innerHTML = '<option value="">All years</option>';
 
     subjects.forEach(subject => {
         const option = document.createElement("option");
@@ -119,26 +129,15 @@ function populateFilters() {
         subjectFilter.appendChild(option);
     });
 
-    yearFilter.innerHTML =
-        '<option value="">All years</option>';
-
     years.forEach(year => {
         const option = document.createElement("option");
         option.value = year;
         option.textContent = year;
         yearFilter.appendChild(option);
     });
-
-    if (subjects.includes(selectedSubject)) {
-        subjectFilter.value = selectedSubject;
-    }
-
-    if (years.includes(selectedYear)) {
-        yearFilter.value = selectedYear;
-    }
 }
 
-// ---------- APPLY FILTERS ----------
+// FILTER PAPERS
 function applyFilters() {
     const exam = normalize(examFilter.value);
     const subject = normalize(subjectFilter.value);
@@ -146,6 +145,7 @@ function applyFilters() {
     const search = normalize(searchInput.value);
 
     filteredPapers = allPapers.filter(paper => {
+
         const matchesExam =
             !exam || normalize(paper.exam) === exam;
 
@@ -167,25 +167,20 @@ function applyFilters() {
         const matchesSearch =
             !search || searchableText.includes(search);
 
-        return matchesExam &&
-            matchesSubject &&
-            matchesYear &&
-            matchesSearch;
+        return matchesExam && matchesSubject &&
+            matchesYear && matchesSearch;
     });
 
     renderPapers();
 }
 
-// ---------- RENDER PAPERS ----------
+// DISPLAY PAPERS
 function renderPapers() {
-    resultCount.textContent =
-        `${filteredPapers.length} papers found`;
+    resultCount.textContent = `${filteredPapers.length} papers found`;
 
     if (!filteredPapers.length) {
         paperGrid.innerHTML = `
-            <p class="muted">
-                No papers found. Try changing your filters.
-            </p>
+            <p class="muted">No papers found. Try changing your filters.</p>
         `;
         return;
     }
@@ -206,9 +201,7 @@ function renderPapers() {
             <article class="paper-card">
                 <div class="paper-card-content">
                     <span class="paper-tag">${exam}</span>
-
                     <h3>${title}</h3>
-
                     <p>${description}</p>
 
                     <div class="paper-meta">
@@ -225,11 +218,10 @@ function renderPapers() {
                             Preview
                         </button>
 
-                        <a
-                            class="primary"
-                            href="${fileURL}"
-                            target="_blank"
-                            rel="noopener">
+                        <a class="primary"
+                           href="${fileURL}"
+                           target="_blank"
+                           rel="noopener">
                             Open / Download
                         </a>
                     </div>
@@ -239,7 +231,7 @@ function renderPapers() {
     }).join("");
 }
 
-// ---------- PDF PREVIEW ----------
+// PDF PREVIEW
 function openPDF(paper) {
     const url = getPaperURL(paper);
 
@@ -259,7 +251,6 @@ function closePDFModal() {
 
 paperGrid.addEventListener("click", event => {
     const button = event.target.closest(".preview-paper");
-
     if (!button) return;
 
     const paper = allPapers.find(
@@ -272,28 +263,19 @@ paperGrid.addEventListener("click", event => {
 closePdf?.addEventListener("click", closePDFModal);
 
 pdfModal?.addEventListener("click", event => {
-    if (event.target === pdfModal) {
-        closePDFModal();
-    }
+    if (event.target === pdfModal) closePDFModal();
 });
 
-// ---------- SEARCH AND FILTER EVENTS ----------
+// SEARCH AND FILTER EVENTS
 searchBtn?.addEventListener("click", applyFilters);
-
-searchInput?.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-        applyFilters();
-    }
-});
-
 searchInput?.addEventListener("input", applyFilters);
 
-examFilter?.addEventListener("change", () => {
-    applyFilters();
+searchInput?.addEventListener("keydown", event => {
+    if (event.key === "Enter") applyFilters();
 });
 
+examFilter?.addEventListener("change", applyFilters);
 subjectFilter?.addEventListener("change", applyFilters);
-
 yearFilter?.addEventListener("change", applyFilters);
 
 clearFilters?.addEventListener("click", () => {
@@ -301,17 +283,15 @@ clearFilters?.addEventListener("click", () => {
     examFilter.value = "";
     subjectFilter.value = "";
     yearFilter.value = "";
-
     applyFilters();
 });
 
-// ---------- ADMIN SESSION ----------
+// ADMIN SESSION
 async function checkSession() {
     try {
-        const response = await fetch(
-            `${API_BASE}/api/session/`,
-            { credentials: "include" }
-        );
+        const response = await fetch(`${API_BASE}/api/session/`, {
+            credentials: "include"
+        });
 
         if (!response.ok) return;
 
@@ -343,29 +323,25 @@ function showAdminSession(email) {
         ?.addEventListener("click", logoutAdmin);
 }
 
-// ---------- ADMIN LOGIN ----------
+// ADMIN LOGIN
 loginForm?.addEventListener("submit", async event => {
     event.preventDefault();
 
     const formData = new FormData(loginForm);
-
     const email = formData.get("email");
     const password = formData.get("password");
 
     loginMessage.textContent = "Signing in...";
 
     try {
-        const response = await fetch(
-            `${API_BASE}/api/auth/login`,
-            {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ email, password })
-            }
-        );
+        const response = await fetch(`${API_BASE}/api/auth/login`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email, password })
+        });
 
         const data = await response.json();
 
@@ -374,7 +350,6 @@ loginForm?.addEventListener("submit", async event => {
         }
 
         loginMessage.textContent = "Login successful";
-
         showAdminSession(data.session.email);
 
     } catch (error) {
@@ -382,7 +357,7 @@ loginForm?.addEventListener("submit", async event => {
     }
 });
 
-// ---------- ADMIN LOGOUT ----------
+// ADMIN LOGOUT
 async function logoutAdmin() {
     try {
         await fetch(`${API_BASE}/api/auth/logout`, {
@@ -391,15 +366,11 @@ async function logoutAdmin() {
         });
 
         location.reload();
-
     } catch (error) {
         console.error("Logout failed:", error);
     }
 }
 
-// ---------- START ----------
-document.addEventListener("DOMContentLoaded", () => {
-    loadPapers();
-    checkSession();
-});
-                               
+// START
+loadPapers();
+checkSession();
