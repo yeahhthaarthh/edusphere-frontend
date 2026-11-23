@@ -1,37 +1,51 @@
 
+/* =========================================
+   EDUSPHERE - COMPLETE FRONTEND APP
+   Backend: FastAPI + Supabase
+   ========================================= */
+
 const API_BASE = "https://edusphere-backend-1-v78v.onrender.com";
 
-const searchInput = document.getElementById("searchInput");
-const searchBtn = document.getElementById("searchBtn");
-const examFilter = document.getElementById("examFilter");
-const subjectFilter = document.getElementById("subjectFilter");
-const yearFilter = document.getElementById("yearFilter");
-const clearFilters = document.getElementById("clearFilters");
-const paperGrid = document.getElementById("paperGrid");
-const resultCount = document.getElementById("resultCount");
-
-const pdfModal = document.getElementById("pdfModal");
-const pdfFrame = document.getElementById("pdfFrame");
-const pdfTitle = document.getElementById("pdfTitle");
-const pdfDownload = document.getElementById("pdfDownload");
-const closePdf = document.getElementById("closePdf");
-
-const adminRoot = document.getElementById("adminRoot");
-const loginForm = document.getElementById("loginForm");
-const loginMessage = document.getElementById("loginMessage");
+const PAGE_SIZE = 100;
+const INITIAL_DISPLAY = 12;
+const DISPLAY_STEP = 12;
 
 let allPapers = [];
 let filteredPapers = [];
-let visibleCount = 12;
+let visibleCount = INITIAL_DISPLAY;
+let selectedExam = "";
+let selectedSubject = "";
+let selectedYear = "";
+let selectedClass = "";
+let searchTerm = "";
+let isLoading = false;
 
-const PAGE_SIZE = 100;
+const $ = (id) => document.getElementById(id);
 
-// --------------------------------------------------
-// HELPERS
-// --------------------------------------------------
+const examFilter = $("examFilter");
+const subjectFilter = $("subjectFilter");
+const yearFilter = $("yearFilter");
+const searchInput = $("searchInput");
+const searchBtn = $("searchBtn");
+const clearFilters = $("clearFilters");
+const paperGrid = $("paperGrid");
+const resultCount = $("resultCount");
+
+/* ---------- HELPERS ---------- */
+
+function clean(value) {
+    return String(value ?? "").trim();
+}
+
+function normalize(value) {
+    return clean(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
 
 function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, char => ({
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
@@ -40,614 +54,713 @@ function escapeHTML(value) {
     })[char]);
 }
 
-function normalize(value) {
-    return String(value ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/[_\s]+/g, "-")
-        .replace(/[^\w-]/g, "");
+function getExam(paper) {
+    return normalize(paper.exam);
 }
 
-function getExamName(exam) {
-    const names = {
-        "jee-main": "JEE Main",
-        "jee-advanced": "JEE Advanced",
-        "neet": "NEET",
-        "cbse": "CBSE",
-        "isc": "ISC",
-        "isc-12": "ISC Class 12",
-        "icse": "ICSE",
-        "icse-10": "ICSE Class 10"
-    };
-
-    return names[normalize(exam)] || exam || "Other";
+function getYear(paper) {
+    return clean(paper.year);
 }
 
-function getPaperURL(paper) {
-    return `${API_BASE}/api/papers/${encodeURIComponent(paper.id)}/file`;
-}
-
-function getClassName(paper) {
-    return String(
+function getClass(paper) {
+    return clean(
         paper.class_name ??
         paper.className ??
         paper.class ??
         ""
-    ).trim();
+    );
 }
 
-function getSubjectCategory(subject) {
-    const value = normalize(subject);
-
-    if (/physics/.test(value)) return "Physics";
-    if (/chemistry/.test(value)) return "Chemistry";
-    if (/mathematics|maths|math/.test(value)) return "Mathematics";
-    if (/biology|botany|zoology/.test(value)) return "Biology";
-
-    return "Other";
+function getSubject(paper) {
+    return clean(paper.subject || "General");
 }
 
-// --------------------------------------------------
-// ADD CLASS FILTER AND LOAD MORE BUTTON
-// --------------------------------------------------
+function getPaperURL(paper) {
+    return `${API_BASE}/api/papers/${encodeURIComponent(paper.id)}/file/`;
+}
 
-let classFilter;
+/* ---------- CLASS FILTER ---------- */
 
-function setupExtraControls() {
-    const filterControls = document.querySelector(".filter-controls");
+function setupClassFilter() {
+    if ($("classFilter")) return;
 
-    if (filterControls && !document.getElementById("classFilter")) {
-        const label = document.createElement("label");
-        label.innerHTML = `
-            Class
-            <select id="classFilter">
-                <option value="">All classes</option>
-            </select>
-        `;
+    const classSelect = document.createElement("select");
+    classSelect.id = "classFilter";
+    classSelect.innerHTML = '<option value="">All Classes</option>';
 
-        filterControls.appendChild(label);
+    const filters = document.querySelector(".filter-controls");
+
+    if (filters) {
+        filters.appendChild(classSelect);
+    } else if (examFilter?.parentElement) {
+        examFilter.parentElement.appendChild(classSelect);
     }
 
-    classFilter = document.getElementById("classFilter");
-
-    if (paperGrid && !document.getElementById("loadMoreButton")) {
-        const button = document.createElement("button");
-
-        button.id = "loadMoreButton";
-        button.type = "button";
-        button.className = "primary";
-        button.textContent = "Load more papers";
-        button.style.display = "none";
-        button.style.margin = "24px auto";
-        button.style.padding = "12px 26px";
-
-        paperGrid.insertAdjacentElement("afterend", button);
-
-        button.addEventListener("click", () => {
-            visibleCount += 12;
-            renderPapers();
-        });
-    }
-
-    classFilter?.addEventListener("change", applyFilters);
+    classSelect.addEventListener("change", () => {
+        selectedClass = classSelect.value;
+        applyFilters();
+    });
 }
 
-// --------------------------------------------------
-// LOAD ALL PAPERS USING PAGINATION
-// --------------------------------------------------
+/* ---------- FETCH COMPLETE ARCHIVE ---------- */
+
+async function fetchPaperBatch(offset) {
+    const url =
+        `${API_BASE}/api/papers/?limit=${PAGE_SIZE}&offset=${offset}`;
+
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            "Accept": "application/json"
+        },
+        cache: "no-store"
+    });
+
+    if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Supports both a direct array and common paginated responses.
+    if (Array.isArray(data)) return data;
+
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.results)) return data.results;
+    if (Array.isArray(data.papers)) return data.papers;
+
+    throw new Error("Unexpected API response format");
+}
 
 async function loadPapers() {
+    if (isLoading) return;
+
+    isLoading = true;
+
+    if (paperGrid) {
+        paperGrid.innerHTML = "<p>Loading complete archive...</p>";
+    }
+
     try {
-        resultCount.textContent = "Loading archive...";
-        paperGrid.innerHTML = "<p>Loading papers...</p>";
-
-        allPapers = [];
-
+        const collected = new Map();
         let offset = 0;
-        let batch = [];
-        let safetyCounter = 0;
+        let pagesLoaded = 0;
+        const MAX_PAGES = 200;
 
-        do {
-            const url =
-                `${API_BASE}/api/papers/?limit=${PAGE_SIZE}&offset=${offset}`;
+        while (pagesLoaded < MAX_PAGES) {
+            const batch = await fetchPaperBatch(offset);
 
-            const response = await fetch(url);
+            if (!batch.length) break;
 
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+            let newRecords = 0;
+
+            for (const paper of batch) {
+                if (paper && paper.id !== undefined && paper.id !== null) {
+                    const id = String(paper.id);
+
+                    if (!collected.has(id)) {
+                        collected.set(id, paper);
+                        newRecords++;
+                    }
+                }
             }
 
-            const data = await response.json();
+            pagesLoaded++;
 
-            batch = Array.isArray(data)
-                ? data
-                : data.papers || data.items || data.results || [];
+            // Stop if the API repeats a batch or gives no new records.
+            if (newRecords === 0) break;
 
-            if (!Array.isArray(batch)) batch = [];
-
-            allPapers.push(...batch);
-
+            // Move by the number actually returned, not by an assumed count.
             offset += batch.length;
-            safetyCounter++;
 
-            if (batch.length === 0) break;
+            // A short batch means we reached the end.
+            if (batch.length < PAGE_SIZE) break;
+        }
 
-        } while (
-            batch.length === PAGE_SIZE &&
-            safetyCounter < 50
-        );
+        allPapers = Array.from(collected.values());
 
-        // Remove duplicate records by ID
-        const unique = new Map();
+        // Sort newest first, then highest ID first.
+        allPapers.sort((a, b) => {
+            const yearDifference =
+                Number(b.year || 0) - Number(a.year || 0);
 
-        allPapers.forEach(paper => {
-            if (paper.id !== undefined) {
-                unique.set(String(paper.id), paper);
-            }
+            if (yearDifference !== 0) return yearDifference;
+
+            return Number(b.id || 0) - Number(a.id || 0);
         });
 
-        allPapers = [...unique.values()];
+        setupClassFilter();
+        populateYearFilter();
+        populateClassFilter();
+        populateSubjectFilter();
 
-        console.log("Total archive records:", allPapers.length);
-
-        setupExtraControls();
-        populateFilters();
         applyFilters();
+
+        console.log("EduSphere archive loaded:", allPapers.length);
+        console.log("Pages fetched:", pagesLoaded);
 
     } catch (error) {
         console.error("Archive loading error:", error);
 
-        resultCount.textContent = "Unable to load archive";
+        if (paperGrid) {
+            paperGrid.innerHTML = `
+                <div class="archive-error">
+                    <h3>Unable to load archive</h3>
+                    <p>${escapeHTML(error.message)}</p>
+                    <button type="button" id="retryArchive">
+                        Try Again
+                    </button>
+                </div>
+            `;
 
-        paperGrid.innerHTML = `
-            <p class="muted">
-                Could not connect to the archive.
-                Please refresh and try again.
-            </p>
-        `;
+            $("retryArchive")?.addEventListener("click", loadPapers);
+        }
+
+        if (resultCount) {
+            resultCount.textContent = "Archive loading failed";
+        }
+    } finally {
+        isLoading = false;
     }
 }
 
-// --------------------------------------------------
-// DYNAMIC FILTER OPTIONS
-// --------------------------------------------------
+/* ---------- FILTER OPTIONS ---------- */
 
-function populateFilters() {
-    updateClassOptions();
-    updateYearOptions();
-    updateSubjectOptions();
-}
+function populateYearFilter() {
+    if (!yearFilter) return;
 
-function updateClassOptions() {
-    if (!classFilter) return;
-
-    const selected = classFilter.value;
-
-    const classes = [...new Set(
-        allPapers
-            .map(getClassName)
-            .filter(Boolean)
-    )].sort((a, b) =>
-        a.localeCompare(b, undefined, { numeric: true })
-    );
-
-    classFilter.innerHTML =
-        '<option value="">All classes</option>';
-
-    classes.forEach(value => {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = /^10$/.test(value)
-            ? "Class 10"
-            : /^12$/.test(value)
-                ? "Class 12"
-                : `Class ${value}`;
-
-        classFilter.appendChild(option);
-    });
-
-    if (classes.includes(selected)) {
-        classFilter.value = selected;
-    }
-}
-
-function updateYearOptions() {
-    const selected = yearFilter.value;
+    const currentValue = yearFilter.value;
 
     const years = [...new Set(
         allPapers
-            .map(paper => String(paper.year ?? "").trim())
-            .filter(year => /^\d{4}$/.test(year))
+            .map(getYear)
+            .filter(Boolean)
     )].sort((a, b) => Number(b) - Number(a));
 
     yearFilter.innerHTML =
-        '<option value="">All years</option>';
+        '<option value="">All Years</option>';
 
-    years.forEach(year => {
+    years.forEach((year) => {
         const option = document.createElement("option");
         option.value = year;
         option.textContent = year;
         yearFilter.appendChild(option);
     });
 
-    if (years.includes(selected)) {
-        yearFilter.value = selected;
+    if (years.includes(currentValue)) {
+        yearFilter.value = currentValue;
     }
 }
 
-function updateSubjectOptions() {
-    const selectedExam = normalize(examFilter.value);
-    const selectedSubject = subjectFilter.value;
+function populateClassFilter() {
+    const classSelect = $("classFilter");
+    if (!classSelect) return;
 
-    const relevantPapers = allPapers.filter(paper => {
-        return !selectedExam ||
-            normalize(paper.exam) === selectedExam;
+    const currentValue = classSelect.value;
+
+    const classes = [...new Set(
+        allPapers.map(getClass).filter(Boolean)
+    )].sort((a, b) => {
+        return a.localeCompare(b, undefined, { numeric: true });
     });
 
+    classSelect.innerHTML =
+        '<option value="">All Classes</option>';
+
+    classes.forEach((className) => {
+        const option = document.createElement("option");
+        option.value = className;
+        option.textContent =
+            /^class/i.test(className)
+                ? className
+                : `Class ${className}`;
+
+        classSelect.appendChild(option);
+    });
+
+    if (classes.includes(currentValue)) {
+        classSelect.value = currentValue;
+    }
+}
+
+/* ---------- SUBJECT GROUPS ---------- */
+
+function getSubjectCategory(subject) {
+    const value = normalize(subject);
+
+    if (
+        value.includes("physics") ||
+        value === "phy"
+    ) return "Physics";
+
+    if (
+        value.includes("chemistry") ||
+        value === "chem"
+    ) return "Chemistry";
+
+    if (
+        value.includes("math") ||
+        value.includes("mathematics")
+    ) return "Mathematics";
+
+    if (
+        value.includes("biology") ||
+        value.includes("botany") ||
+        value.includes("zoology")
+    ) return "Biology";
+
+    return "Other";
+}
+
+function populateSubjectFilter() {
+    if (!subjectFilter) return;
+
+    const currentValue = subjectFilter.value;
+    const exam = normalize(examFilter?.value);
+
+    let papers = allPapers;
+
+    if (exam) {
+        papers = papers.filter(
+            paper => getExam(paper) === exam
+        );
+    }
+
     const subjects = [...new Set(
-        relevantPapers
-            .map(paper => paper.subject)
-            .filter(Boolean)
+        papers.map(getSubject).filter(Boolean)
     )].sort((a, b) => a.localeCompare(b));
 
-    subjectFilter.innerHTML = "";
+    subjectFilter.innerHTML =
+        '<option value="">All Subjects</option>';
 
-    subjectFilter.add(
-        new Option("All subjects", "")
-    );
+    const competitive =
+        exam.includes("jee") || exam.includes("neet");
 
-    const categories = [
-        "Physics",
-        "Chemistry",
-        "Mathematics",
-        "Biology",
-        "Other"
-    ];
+    if (competitive) {
+        const groups = {
+            "Physics": [],
+            "Chemistry": [],
+            "Mathematics": [],
+            "Biology": [],
+            "Other": []
+        };
 
-    const isCompetitive =
-        ["jee-main", "jee-advanced", "neet"].includes(selectedExam);
+        subjects.forEach((subject) => {
+            groups[getSubjectCategory(subject)].push(subject);
+        });
 
-    if (isCompetitive) {
-        categories.forEach(category => {
-            const matching = subjects.filter(subject =>
-                getSubjectCategory(subject) === category
-            );
-
-            if (!matching.length) return;
+        Object.entries(groups).forEach(([groupName, values]) => {
+            if (!values.length) return;
 
             const group = document.createElement("optgroup");
-            group.label = category;
+            group.label = groupName;
 
-            matching.forEach(subject => {
-                group.appendChild(new Option(subject, subject));
+            values.forEach((subject) => {
+                const option = document.createElement("option");
+                option.value = subject;
+                option.textContent = subject;
+                group.appendChild(option);
             });
 
             subjectFilter.appendChild(group);
         });
     } else {
-        subjects.forEach(subject => {
-            subjectFilter.add(new Option(subject, subject));
+        subjects.forEach((subject) => {
+            const option = document.createElement("option");
+            option.value = subject;
+            option.textContent = subject;
+            subjectFilter.appendChild(option);
         });
     }
 
-    if (subjects.includes(selectedSubject)) {
-        subjectFilter.value = selectedSubject;
+    if (subjects.includes(currentValue)) {
+        subjectFilter.value = currentValue;
+    } else {
+        subjectFilter.value = "";
     }
+
+    selectedSubject = subjectFilter.value;
 }
 
-// --------------------------------------------------
-// FILTER PAPERS
-// --------------------------------------------------
+/* ---------- SEARCH AND FILTERING ---------- */
 
 function applyFilters() {
-    const exam = normalize(examFilter.value);
-    const subject = normalize(subjectFilter.value);
-    const year = String(yearFilter.value || "");
-    const selectedClass = classFilter?.value || "";
-    const search = normalize(searchInput.value);
+    selectedExam = normalize(examFilter?.value);
+    selectedSubject = subjectFilter?.value || "";
+    selectedYear = yearFilter?.value || "";
+    selectedClass = $("classFilter")?.value || "";
+    searchTerm = normalize(searchInput?.value);
 
-    filteredPapers = allPapers.filter(paper => {
-        const matchesExam =
-            !exam || normalize(paper.exam) === exam;
+    const searchWords = searchTerm
+        .split(/\s+/)
+        .filter(Boolean);
 
-        const matchesSubject =
-            !subject || normalize(paper.subject) === subject;
+    filteredPapers = allPapers.filter((paper) => {
+        if (
+            selectedExam &&
+            getExam(paper) !== selectedExam
+        ) return false;
 
-        const matchesYear =
-            !year || String(paper.year) === year;
+        if (
+            selectedSubject &&
+            getSubject(paper) !== selectedSubject
+        ) return false;
 
-        const matchesClass =
-            !selectedClass || getClassName(paper) === selectedClass;
+        if (
+            selectedYear &&
+            getYear(paper) !== selectedYear
+        ) return false;
 
-        const searchableText = normalize([
-            paper.title,
-            paper.exam,
-            paper.subject,
-            paper.year,
-            paper.session,
-            paper.description,
-            paper.class_name,
-            paper.subject_code
-        ].join(" "));
+        if (
+            selectedClass &&
+            getClass(paper) !== selectedClass
+        ) return false;
 
-        const matchesSearch =
-            !search || searchableText.includes(search);
+        if (searchWords.length) {
+            const searchableText = normalize([
+                paper.title,
+                paper.exam,
+                paper.subject,
+                paper.year,
+                paper.session,
+                paper.description,
+                paper.class_name,
+                paper.subject_code,
+                paper.id
+            ].join(" "));
 
-        return matchesExam &&
-            matchesSubject &&
-            matchesYear &&
-            matchesClass &&
-            matchesSearch;
+            const matches = searchWords.every(word =>
+                searchableText.includes(word)
+            );
+
+            if (!matches) return false;
+        }
+
+        return true;
     });
 
-    visibleCount = 12;
+    visibleCount = INITIAL_DISPLAY;
     renderPapers();
 }
 
-// --------------------------------------------------
-// DISPLAY PAPERS
-// --------------------------------------------------
+/* ---------- PAPER CARDS ---------- */
 
 function renderPapers() {
-    resultCount.textContent =
-        `${filteredPapers.length} papers found`;
+    if (!paperGrid) return;
 
-    const visiblePapers =
-        filteredPapers.slice(0, visibleCount);
+    const visiblePapers = filteredPapers.slice(0, visibleCount);
 
-    const loadMoreButton =
-        document.getElementById("loadMoreButton");
+    if (resultCount) {
+        resultCount.textContent =
+            `Showing ${visiblePapers.length} of ${filteredPapers.length} papers`;
+    }
 
     if (!filteredPapers.length) {
         paperGrid.innerHTML = `
-            <p class="muted">
-                No papers found. Try another search or filter.
-            </p>
+            <div class="no-results">
+                <h3>No papers found</h3>
+                <p>Try changing your search or filters.</p>
+            </div>
         `;
-
-        if (loadMoreButton) {
-            loadMoreButton.style.display = "none";
-        }
-
+        updateLoadMoreButton();
         return;
     }
 
-    paperGrid.innerHTML = visiblePapers.map(paper => {
-        const title = escapeHTML(paper.title);
-        const subject = escapeHTML(paper.subject);
-        const exam = escapeHTML(getExamName(paper.exam));
-        const year = escapeHTML(paper.year);
-        const className = escapeHTML(getClassName(paper));
-        const session = escapeHTML(paper.session || "Regular");
-
-        const description = escapeHTML(
-            paper.description || "Official question paper"
+    paperGrid.innerHTML = visiblePapers.map((paper) => {
+        const title = escapeHTML(
+            paper.title || `${paper.exam || ""} ${paper.subject || ""}`
         );
 
-        const fileURL = getPaperURL(paper);
+        const exam = escapeHTML(paper.exam || "Exam");
+        const subject = escapeHTML(getSubject(paper));
+        const year = escapeHTML(getYear(paper));
+        const session = escapeHTML(paper.session || "");
+        const className = escapeHTML(getClass(paper));
+        const description = escapeHTML(
+            paper.description || "Previous year question paper"
+        );
+
+        const classLabel = className
+            ? `<span>Class ${className.replace(/^class\s*/i, "")}</span>`
+            : "";
 
         return `
             <article class="paper-card">
-                <div class="paper-card-content">
-
-                    <span class="paper-tag">${exam}</span>
+                <div class="paper-info">
+                    <div class="paper-tags">
+                        <span>${exam}</span>
+                        <span>${year}</span>
+                        ${classLabel}
+                    </div>
 
                     <h3>${title}</h3>
 
-                    <p>${description}</p>
+                    <p class="paper-subject">${subject}</p>
+                    <p class="paper-description">${description}</p>
 
-                    <div class="paper-meta">
-                        <span>${subject}</span>
-                        <span>${year}</span>
-                        ${className ? `<span>Class ${className}</span>` : ""}
-                        <span>${session}</span>
-                    </div>
+                    ${session
+                        ? `<p class="paper-session">${session}</p>`
+                        : ""}
+                </div>
 
-                    <div class="paper-actions">
-                        <button
-                            type="button"
-                            class="primary preview-paper"
-                            data-id="${escapeHTML(paper.id)}">
-                            Preview
-                        </button>
+                <div class="paper-actions">
+                    <button
+                        type="button"
+                        class="preview-button"
+                        data-preview="${escapeHTML(paper.id)}">
+                        Preview
+                    </button>
 
-                        <a
-                            class="primary"
-                            href="${fileURL}"
-                            target="_blank"
-                            rel="noopener">
-                            Open / Download
-                        </a>
-                    </div>
-
+                    <a
+                        class="download-button"
+                        href="${getPaperURL(paper)}"
+                        target="_blank"
+                        rel="noopener noreferrer">
+                        PDF / Download
+                    </a>
                 </div>
             </article>
         `;
     }).join("");
 
-    if (loadMoreButton) {
-        loadMoreButton.style.display =
-            visibleCount < filteredPapers.length ? "block" : "none";
+    updateLoadMoreButton();
+}
 
-        loadMoreButton.textContent =
-            `Load more (${filteredPapers.length - visiblePapers.length} remaining)`;
+function updateLoadMoreButton() {
+    let button = $("loadMoreButton");
+
+    if (!button) {
+        button = document.createElement("button");
+        button.id = "loadMoreButton";
+        button.type = "button";
+        button.textContent = "Load More Papers";
+
+        paperGrid.insertAdjacentElement("afterend", button);
+
+        button.addEventListener("click", () => {
+            visibleCount += DISPLAY_STEP;
+            renderPapers();
+        });
     }
+
+    button.style.display =
+        visibleCount < filteredPapers.length
+            ? "block"
+            : "none";
 }
 
-// --------------------------------------------------
-// PREVIEW: OPEN IN NEW TAB
-// --------------------------------------------------
+/* ---------- PDF PREVIEW MODAL ---------- */
 
-paperGrid.addEventListener("click", event => {
-    const button = event.target.closest(".preview-paper");
+function openPreview(paper) {
+    const modal = $("pdfModal");
+    const frame = $("pdfFrame");
+    const title = $("pdfTitle");
+    const download = $("pdfDownload");
 
-    if (!button) return;
+    if (!modal || !frame) {
+        window.open(getPaperURL(paper), "_blank", "noopener");
+        return;
+    }
 
-    const paper = allPapers.find(
-        item => String(item.id) === button.dataset.id
-    );
+    if (title) {
+        title.textContent = paper.title || "Paper Preview";
+    }
 
-    if (!paper) return;
+    const url = getPaperURL(paper);
 
-    // Open the archive file endpoint in a new browser tab.
-    // The backend must serve PDFs inline for browser preview.
-    window.open(getPaperURL(paper), "_blank", "noopener");
-});
+    frame.src = url;
 
-// Keep old modal controls safe if they are present.
-function closePDFModal() {
-    if (!pdfModal) return;
+    if (download) {
+        download.href = url;
+        download.target = "_blank";
+    }
 
-    pdfModal.style.display = "none";
-    pdfModal.setAttribute("aria-hidden", "true");
-
-    if (pdfFrame) pdfFrame.src = "about:blank";
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
 }
 
-closePdf?.addEventListener("click", closePDFModal);
+function closePreview() {
+    const modal = $("pdfModal");
+    const frame = $("pdfFrame");
 
-pdfModal?.addEventListener("click", event => {
-    if (event.target === pdfModal) closePDFModal();
-});
+    if (!modal) return;
 
-// --------------------------------------------------
-// SEARCH AND FILTER EVENTS
-// --------------------------------------------------
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
 
-searchBtn?.addEventListener("click", applyFilters);
+    if (frame) frame.src = "about:blank";
 
-searchInput?.addEventListener("input", applyFilters);
+    document.body.style.overflow = "";
+}
 
-searchInput?.addEventListener("keydown", event => {
-    if (event.key === "Enter") applyFilters();
-});
-
-examFilter?.addEventListener("change", () => {
-    updateSubjectOptions();
-    applyFilters();
-});
-
-subjectFilter?.addEventListener("change", applyFilters);
-yearFilter?.addEventListener("change", applyFilters);
-
-clearFilters?.addEventListener("click", () => {
-    searchInput.value = "";
-    examFilter.value = "";
-    subjectFilter.value = "";
-    yearFilter.value = "";
-
-    if (classFilter) classFilter.value = "";
-
-    updateSubjectOptions();
-    applyFilters();
-});
-
-// --------------------------------------------------
-// ADMIN SESSION
-// --------------------------------------------------
+/* ---------- ADMIN LOGIN / SESSION ---------- */
 
 async function checkSession() {
     try {
-        const response = await fetch(
-            `${API_BASE}/api/session/`,
-            { credentials: "include" }
-        );
+        const response = await fetch(`${API_BASE}/api/session/`, {
+            credentials: "include",
+            cache: "no-store"
+        });
 
         if (!response.ok) return;
 
         const data = await response.json();
 
-        if (data.session?.isAdmin) {
-            showAdminSession(data.session.email);
-        }
-    } catch (error) {
-        console.error("Session check failed:", error);
-    }
-}
-
-function showAdminSession(email) {
-    if (!adminRoot) return;
-
-    adminRoot.innerHTML = `
-        <div class="login-card">
-            <div class="login-icon">✳</div>
-            <h3>Welcome, admin!</h3>
-            <p class="muted">${escapeHTML(email)}</p>
-
-            <button id="logoutButton" class="primary" type="button">
-                Sign out
-            </button>
-        </div>
-    `;
-
-    document.getElementById("logoutButton")
-        ?.addEventListener("click", logoutAdmin);
-}
-
-// --------------------------------------------------
-// ADMIN LOGIN
-// --------------------------------------------------
-
-loginForm?.addEventListener("submit", async event => {
-    event.preventDefault();
-
-    const formData = new FormData(loginForm);
-
-    const email = formData.get("email");
-    const password = formData.get("password");
-
-    loginMessage.textContent = "Signing in...";
-
-    try {
-        const response = await fetch(
-            `${API_BASE}/api/auth/login`,
-            {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ email, password })
-            }
+        const loggedIn = Boolean(
+            data.authenticated ||
+            data.logged_in ||
+            data.loggedIn ||
+            data.admin
         );
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.detail || "Login failed");
+        if ($("adminRoot")) {
+            $("adminRoot").style.display =
+                loggedIn ? "block" : "none";
         }
 
-        loginMessage.textContent = "Login successful";
+        if ($("adminNav")) {
+            $("adminNav").style.display =
+                loggedIn ? "block" : "none";
+        }
+    } catch (error) {
+        console.warn("Admin session check failed:", error);
+    }
+}
 
-        showAdminSession(data.session.email);
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const form = $("loginForm");
+    const message = $("loginMessage");
+
+    if (!form) return;
+
+    const emailInput =
+        form.querySelector('[type="email"]') ||
+        form.querySelector('[name="email"]');
+
+    const passwordInput =
+        form.querySelector('[type="password"]') ||
+        form.querySelector('[name="password"]');
+
+    if (!emailInput || !passwordInput) return;
+
+    if (message) message.textContent = "Signing in...";
+
+    try {
+        const response = await fetch(`${API_BASE}/api/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify({
+                email: emailInput.value,
+                password: passwordInput.value
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || data.message || "Login failed");
+        }
+
+        if (message) {
+            message.textContent = "Login successful";
+        }
+
+        form.reset();
+        await checkSession();
 
     } catch (error) {
-        loginMessage.textContent = error.message;
+        if (message) message.textContent = error.message;
     }
-});
+}
 
-// --------------------------------------------------
-// ADMIN LOGOUT
-// --------------------------------------------------
-
-async function logoutAdmin() {
+async function handleLogout() {
     try {
         await fetch(`${API_BASE}/api/auth/logout`, {
             method: "POST",
             credentials: "include"
         });
-
-        location.reload();
-
     } catch (error) {
-        console.error("Logout failed:", error);
+        console.warn("Logout request failed:", error);
     }
+
+    if ($("adminRoot")) $("adminRoot").style.display = "none";
+    if ($("adminNav")) $("adminNav").style.display = "none";
 }
 
-// --------------------------------------------------
-// START
-// --------------------------------------------------
+/* ---------- EVENT LISTENERS ---------- */
 
-setupExtraControls();
-loadPapers();
-checkSession();
+function setupEvents() {
+    examFilter?.addEventListener("change", () => {
+        populateSubjectFilter();
+        applyFilters();
+    });
+
+    subjectFilter?.addEventListener("change", applyFilters);
+    yearFilter?.addEventListener("change", applyFilters);
+    $("classFilter")?.addEventListener("change", applyFilters);
+
+    searchInput?.addEventListener("input", applyFilters);
+
+    searchBtn?.addEventListener("click", applyFilters);
+
+    searchInput?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            applyFilters();
+        }
+    });
+
+    clearFilters?.addEventListener("click", () => {
+        if (examFilter) examFilter.value = "";
+        if (subjectFilter) subjectFilter.value = "";
+        if (yearFilter) yearFilter.value = "";
+        if ($("classFilter")) $("classFilter").value = "";
+        if (searchInput) searchInput.value = "";
+
+        populateSubjectFilter();
+        applyFilters();
+    });
+
+    paperGrid?.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-preview]");
+        if (!button) return;
+
+        const paper = allPapers.find(
+            item => String(item.id) === button.dataset.preview
+        );
+
+        if (paper) openPreview(paper);
+    });
+
+    $("closePdf")?.addEventListener("click", closePreview);
+
+    $("pdfModal")?.addEventListener("click", (event) => {
+        if (event.target === $("pdfModal")) {
+            closePreview();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closePreview();
+    });
+
+    $("loginForm")?.addEventListener("submit", handleLogin);
+
+    $("logoutButton")?.addEventListener("click", handleLogout);
+}
+
+/* ---------- START APP ---------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+    setupClassFilter();
+    setupEvents();
+    loadPapers();
+    checkSession();
+});
