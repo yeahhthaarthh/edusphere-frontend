@@ -1,432 +1,136 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#fffaf2">
-  <meta name="description" content="EduSphere is your educational resource platform for previous-year question papers and exam preparation.">
-
-  <title>EduSphere — Educational Resource Portal</title>
-
+  <meta name="theme-color" content="#f8f5ef">
+  <meta name="description" content="EduSphere — a thoughtful library of previous-year question papers and sample papers.">
+  <title>EduSphere — Learn with purpose</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="assets/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=3">
 </head>
-
 <body>
-
-  <!-- HEADER -->
+  <div class="page-grain" aria-hidden="true"></div>
   <header class="topbar">
     <a class="brand" href="#home" aria-label="EduSphere home">
-      <span class="brand-mark">E</span>
-      <span class="brand-name">
-        EduSphere
-        <small>YOUR LEARNING SPACE</small>
-      </span>
+      <span class="brand-mark">e</span>
+      <span class="brand-copy"><strong>EduSphere</strong><small>YOUR LEARNING SPACE</small></span>
     </a>
-
-    <nav class="main-nav" aria-label="Main navigation">
+    <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span></button>
+    <nav class="main-nav" id="mainNav">
       <a class="nav-link active" href="#home">Home</a>
-      <a class="nav-link" href="#papers">Explore papers</a>
-      <a class="nav-link" href="#admin" id="adminNav">Admin</a>
+      <a class="nav-link" href="#papers">Question papers</a>
+      <a class="nav-link" href="#samplePapers">Sample papers</a>
+      <a class="nav-link" href="#admin">Admin</a>
     </nav>
-
-    <a class="nav-cta" href="#papers">
-      Find a paper <span aria-hidden="true">↗</span>
-    </a>
+    <a class="nav-cta" href="#papers">Explore archive <span>↗</span></a>
   </header>
 
   <main id="home">
-
-    <!-- HERO -->
     <section class="hero">
       <div class="hero-copy-block">
-
-        <div class="hero-pill">
-          <span class="sparkle">✦</span>
-          PREPARE SMARTER, NOT HARDER
-        </div>
-
-        <h1>
-          Your next big<br>
-          score starts <span>here.</span>
-        </h1>
-
-        <p class="hero-copy">
-          A student-friendly library of previous-year question papers.
-          Find what you need, practise with purpose, and walk into every exam with confidence.
-        </p>
-
-        <div class="searchbar" role="search">
-          <span class="search-icon" aria-hidden="true">⌕</span>
-
-          <input
-            id="searchInput"
-            type="search"
-            placeholder="Search subject, exam or year..."
-            aria-label="Search question papers"
-          >
-
-          <button id="searchBtn" type="button">
-            Search papers <span aria-hidden="true">→</span>
-          </button>
-        </div>
-
-        <p class="search-hint">
-          <span class="hint-dot"></span>
-          Try “Physics”, “CBSE” or “2025”
-        </p>
-
+        <div class="eyebrow-pill"><i></i> A CALMER WAY TO PREPARE</div>
+        <h1>Make every<br>practice <em>count.</em></h1>
+        <p class="hero-copy">A thoughtfully organised library of previous-year question papers and sample papers. Find your next paper, build confidence and keep moving forward.</p>
+        <form class="hero-search" id="heroSearch" role="search">
+          <span class="search-symbol">⌕</span>
+          <input id="searchInput" type="search" placeholder="Search exam, subject, year or paper..." aria-label="Search papers">
+          <button type="submit">Search <span>→</span></button>
+        </form>
+        <div class="search-hints"><span class="pulse-dot"></span> Try Physics, CBSE, JEE Main or 2025</div>
+        <div class="hero-proof"><span class="proof-icon">✳</span><span>One focused session at a time.</span></div>
       </div>
-
-      <!-- HERO ART -->
-      <div class="hero-art" aria-hidden="true">
-
-        <div class="art-orbit orbit-one"></div>
-        <div class="art-orbit orbit-two"></div>
-
-        <div class="paper-sheet sheet-back">
-          <i></i><i></i><i></i><i></i>
+      <div class="hero-art" aria-label="Decorative illustration of study papers">
+        <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+        <div class="shape shape-circle"></div><div class="shape shape-diamond"></div><div class="shape shape-star">✳</div>
+        <div class="art-card art-card-back"><div class="mini-label">STUDY NOTES</div><div class="art-lines"><i></i><i></i><i></i><i></i></div><div class="art-swatch"></div></div>
+        <div class="art-card art-card-front">
+          <div class="paper-topline"><span>EDUSPHERE / 001</span><b>✦</b></div>
+          <div class="art-title">A little<br><em>progress</em><br>every day.</div>
+          <div class="art-rule"></div><div class="art-foot"><span>LEARN</span><span>PRACTISE</span><span>GROW</span></div>
         </div>
-
-        <div class="paper-sheet sheet-front">
-
-          <div class="sheet-top">
-            <span>✳ STUDY NOTES</span>
-            <b>01</b>
-          </div>
-
-          <div class="sheet-title">
-            You've<br>got this!
-          </div>
-
-          <div class="sheet-lines">
-            <i></i><i></i><i></i>
-          </div>
-
-          <div class="sheet-stamp">
-            KEEP<br>GOING ✦
-          </div>
-
-        </div>
-
-        <div class="float-star star-a">✦</div>
-        <div class="float-star star-b">✳</div>
-
-        <div class="float-note">
-          little steps,<br>
-          big results <span>↗</span>
-        </div>
-
+        <div class="floating-note">Your next step<br><strong>starts here ↗</strong></div>
+        <div class="floating-orb"></div>
       </div>
-
-      <div class="hero-bottom">
-        <span>MADE FOR CURIOUS MINDS</span>
-        <span class="hero-bottom-line"></span>
-        <span>LEARN · PRACTISE · GROW</span>
-      </div>
-
+      <div class="hero-bottom"><span>MADE FOR CURIOUS MINDS</span><i></i><span>LEARN · PRACTISE · GROW</span></div>
     </section>
 
-    <!-- QUICK HIGHLIGHTS -->
-    <section class="quick-strip" aria-label="Archive highlights">
-
-      <div class="quick-item">
-        <span class="quick-icon peach">▤</span>
-        <div>
-          <strong>Past papers</strong>
-          <small>Practise with real questions</small>
-        </div>
-      </div>
-
-      <div class="quick-item">
-        <span class="quick-icon lilac">⌕</span>
-        <div>
-          <strong>Easy to explore</strong>
-          <small>Find papers in a few clicks</small>
-        </div>
-      </div>
-
-      <div class="quick-item">
-        <span class="quick-icon mint">✦</span>
-        <div>
-          <strong>Study with focus</strong>
-          <small>Build confidence every day</small>
-        </div>
-      </div>
-
+    <section class="trust-strip">
+      <div class="trust-item"><span class="trust-icon rose">▤</span><div><b>Past papers</b><small>Practice with real questions</small></div></div>
+      <div class="trust-item"><span class="trust-icon violet">⌕</span><div><b>Easy to explore</b><small>Find the right paper faster</small></div></div>
+      <div class="trust-item"><span class="trust-icon sage">✳</span><div><b>Made for focus</b><small>Less clutter, more learning</small></div></div>
     </section>
 
-    <!-- PAPER COLLECTION -->
-    <section id="papers" class="section collection-section">
-
+    <section class="section archive-section" id="papers">
       <div class="section-heading">
-        <div>
-          <p class="eyebrow">THE STUDY COLLECTION</p>
-
-          <h2>
-            Find your <span>next practice paper.</span>
-          </h2>
-
-          <p class="section-intro">
-            Choose your exam, explore the archive and get practising.
-          </p>
-        </div>
-
-        <div class="collection-doodle" aria-hidden="true">✳</div>
+        <div><p class="eyebrow">THE QUESTION PAPER LIBRARY</p><h2>Find your next<br><em>practice paper.</em></h2><p class="section-intro">Explore previous-year papers across school and competitive examinations.</p></div>
+        <div class="heading-art" aria-hidden="true"><span>✳</span><small>01 / ARCHIVE</small></div>
       </div>
-
-      <!-- FILTERS -->
       <div class="filter-panel">
-
-        <div class="filter-panel-top">
-          <div class="filter-label">
-            ☷ FIND YOUR PRACTICE PAPER
-          </div>
-
-          <button
-            type="button"
-            id="clearFilters"
-            class="clear-filters"
-          >
-            Clear filters ↺
-          </button>
+        <div class="filter-panel-head"><div><span class="filter-kicker">REFINE YOUR SEARCH</span><h3>Find a paper</h3></div><button id="clearFilters" class="clear-button" type="button">Reset filters ↺</button></div>
+        <div class="filter-grid">
+          <label>Exam<select id="examFilter"><option value="">All exams</option><option value="jee main">JEE Main</option><option value="jee advanced">JEE Advanced</option><option value="neet">NEET</option><option value="cbse">CBSE</option><option value="icse">ICSE</option><option value="isc">ISC</option></select></label>
+          <label>Subject <span class="field-hint">Search within subjects</span><input id="subjectSearch" class="subject-search" type="search" placeholder="Type a subject..."><select id="subjectFilter"><option value="">All subjects</option></select></label>
+          <label>Year<select id="yearFilter"><option value="">All years</option></select></label>
+          <label>Class<select id="classFilter"><option value="">All classes</option></select></label>
+          <label>Session<select id="sessionFilter"><option value="">All sessions</option></select></label>
         </div>
-
-        <div class="filter-controls">
-
-          <label>
-            Exam
-
-            <select id="examFilter">
-              <option value="">All exams</option>
-              <option value="jee main">JEE Main</option>
-              <option value="jee advanced">JEE Advanced</option>
-              <option value="neet">NEET</option>
-              <option value="cbse">CBSE</option>
-              <option value="icse">ICSE</option>
-              <option value="isc">ISC</option>
-            </select>
-          </label>
-
-          <label>
-            Subject
-
-            <select id="subjectFilter">
-              <option value="">All subjects</option>
-            </select>
-          </label>
-
-          <label>
-            Year
-
-            <select id="yearFilter">
-              <option value="">All years</option>
-            </select>
-          </label>
-
-        </div>
+        <div class="filter-bottom"><span><i class="pulse-dot"></i> Filters update instantly</span><span id="activeFilterText">No filters applied</span></div>
       </div>
-
-      <!-- RESULTS -->
-      <div class="results-bar">
-        <span id="resultCount">Loading papers...</span>
-        <span>✦ Keep practising</span>
-      </div>
-
-      <!-- IMPORTANT: ONLY ONE PAPER GRID -->
-      <div
-        id="paperGrid"
-        class="paper-grid"
-        aria-live="polite"
-      >
-        <p class="muted">Loading papers...</p>
-      </div>
-
-      <div class="collection-note">
-        <span>✦</span>
-        Keep showing up. Your hard work adds up.
-      </div>
-
+      <div class="results-heading"><div><span class="eyebrow">YOUR RESULTS</span><p id="resultCount" aria-live="polite">Loading papers…</p></div><span class="results-note">PREVIOUS-YEAR PAPERS</span></div>
+      <div id="paperGrid" class="paper-grid" aria-live="polite"><div class="loading-state"><span class="loader"></span><p>Preparing your study collection…</p></div></div>
+      <div class="load-more-wrap"><button id="loadMoreButton" class="load-more" type="button" hidden>Load more papers <span>↓</span></button></div>
+      <div class="section-footnote"><span>✦</span> Keep showing up. Your hard work adds up.</div>
     </section>
 
-    <!-- MOTIVATION -->
-    <section class="motivation-band">
-
-      <div class="motivation-mark">“</div>
-
-      <div>
-        <p class="eyebrow">A LITTLE REMINDER</p>
-
-        <h2>
-          Progress over perfection.<br>
-          <span>One paper at a time.</span>
-        </h2>
+    <section class="sample-section" id="samplePapers">
+      <div class="sample-inner">
+        <div class="sample-heading">
+          <div><p class="eyebrow">PLAN · PRACTISE · PREPARE</p><h2>CBSE sample papers,<br><em>all in one place.</em></h2><p class="section-intro">Official sample-paper records from the EduSphere archive, organised for Class 10 and Class 12 practice.</p></div>
+          <div class="sample-stamp"><span>CBSE</span><b>SPECIMEN<br>COLLECTION</b><i>✳</i></div>
+        </div>
+        <div class="sample-controls">
+          <label>Class<select id="sampleClassFilter"><option value="">All classes</option><option value="10">Class 10</option><option value="12">Class 12</option></select></label>
+          <label>Subject <input id="sampleSubjectSearch" type="search" placeholder="Find a subject…"><select id="sampleSubjectFilter"><option value="">All subjects</option></select></label>
+          <label>Year<select id="sampleYearFilter"><option value="">All years</option></select></label>
+          <button id="clearSampleFilters" type="button" class="clear-button">Reset ↺</button>
+        </div>
+        <div class="sample-results-line"><p id="sampleResultCount" aria-live="polite">Loading sample papers…</p><span>CBSE · CLASS X & XII</span></div>
+        <div id="samplePaperGrid" class="paper-grid sample-grid" aria-live="polite"><div class="loading-state"><span class="loader"></span><p>Finding sample papers…</p></div></div>
+        <div id="sampleEmptyNote" class="sample-empty" hidden>No CBSE sample-paper records were found in the archive yet. Add sample-paper records through the existing admin workflow and they will appear here automatically.</div>
       </div>
-
-      <a href="#papers" class="motivation-link">
-        Explore the archive <span>→</span>
-      </a>
-
     </section>
 
-    <!-- ADMIN SECTION -->
-    <section id="admin" class="admin-section">
+    <section class="quote-band"><div class="quote-mark">“</div><div><p class="eyebrow">A LITTLE REMINDER</p><h2>Progress over perfection.<br><em>One paper at a time.</em></h2></div><a href="#papers">Back to the library <span>↗</span></a><div class="quote-shape"></div></section>
 
-      <div class="admin-heading">
-
-        <div>
-          <p class="eyebrow">FOR THE TEAM</p>
-
-          <h2>
-            Archive <span>management</span>
-          </h2>
-
-          <p class="section-intro">
-            Administrators can sign in to organise and update the paper collection.
-          </p>
+    <section class="admin-section" id="admin">
+      <div class="section-heading admin-section-heading"><div><p class="eyebrow">FOR THE TEAM</p><h2>Archive <em>management.</em></h2><p class="section-intro">A secure space for administrators to monitor and maintain the paper collection.</p></div><div class="admin-symbol">⌑</div></div>
+      <div id="adminRoot" class="admin-root">
+        <div class="admin-login-card"><div class="admin-login-icon">✳</div><span class="filter-kicker">RESTRICTED ACCESS</span><h3>Welcome back.</h3><p>Sign in to access the EduSphere administration area.</p>
+          <form id="loginForm"><label>Email address<input name="email" type="email" placeholder="admin@example.com" required autocomplete="username"></label><label>Password<input name="password" type="password" placeholder="Enter your password" required autocomplete="current-password"></label><button class="primary-button" type="submit">Sign in to dashboard <span>→</span></button><p id="loginMessage" class="form-message" aria-live="polite"></p></form>
         </div>
-
-        <div class="admin-lock" aria-hidden="true">⌑</div>
-
       </div>
-
-      <div id="adminRoot">
-
-        <div class="login-card">
-
-          <div class="login-icon">✳</div>
-
-          <h3>Welcome back, admin!</h3>
-
-          <p class="muted">
-            Sign in to manage question papers and keep the archive up to date.
-          </p>
-
-          <form id="loginForm">
-
-            <label>
-              Email address
-
-              <input
-                name="email"
-                type="email"
-                placeholder="admin@example.com"
-                required
-                autocomplete="username"
-              >
-            </label>
-
-            <label>
-              Password
-
-              <input
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                required
-                autocomplete="current-password"
-              >
-            </label>
-
-            <button class="primary" type="submit">
-              Sign in to dashboard <span>→</span>
-            </button>
-
-            <p
-              id="loginMessage"
-              class="message"
-              aria-live="polite"
-            ></p>
-
-          </form>
-
-        </div>
-
+      <div id="adminDashboard" class="admin-dashboard" hidden>
+        <div class="admin-welcome"><div><span class="filter-kicker">EDUSPHERE CONTROL ROOM</span><h3>Welcome to your dashboard.</h3><p id="adminWelcomeText">Your archive overview.</p></div><button id="logoutButton" class="clear-button" type="button">Sign out ↗</button></div>
+        <div class="stats-grid"><article class="stat-card"><span>Total papers</span><strong id="statTotal">—</strong><small>In the archive</small></article><article class="stat-card lilac-stat"><span>With PDF files</span><strong id="statFiles">—</strong><small>Ready to preview</small></article><article class="stat-card sage-stat"><span>Downloads</span><strong id="statDownloads">—</strong><small>Recorded activity</small></article></div>
+        <div class="admin-note"><b>Archive management</b><p>Use your existing secure admin workflow and API to add or update papers. This dashboard does not change your database structure.</p></div>
       </div>
-
     </section>
-
   </main>
 
-  <!-- FOOTER -->
-  <footer class="site-footer">
+  <footer class="site-footer"><a class="brand footer-brand" href="#home"><span class="brand-mark">e</span><span class="brand-copy"><strong>EduSphere</strong><small>YOUR LEARNING SPACE</small></span></a><p>Made for learners, powered by practice.</p><a href="#home" class="back-top">Back to top ↑</a><small>© 2026 EduSphere · Learn with purpose.</small></footer>
 
-    <a class="footer-brand" href="#home">
-      <span class="brand-mark">E</span>
-      EduSphere
-    </a>
-
-    <p>Made for learners, powered by practice.</p>
-
-    <a href="#home" class="back-top">
-      Back to top ↑
-    </a>
-
-    <small>
-      © 2026 EduSphere · Educational Resource Portal
-    </small>
-
-  </footer>
-
-  <!-- PDF VIEWER -->
-  <div
-    id="pdfModal"
-    class="pdf-modal"
-    aria-hidden="true"
-  >
-
-    <div class="pdf-modal-content">
-
-      <div class="pdf-modal-header">
-
-        <div>
-          <span class="pdf-label">
-            EDUSPHERE DOCUMENT VIEWER
-          </span>
-
-          <h3 id="pdfTitle">
-            Question Paper Preview
-          </h3>
-        </div>
-
-        <button
-          type="button"
-          id="closePdf"
-          class="close-pdf"
-          aria-label="Close PDF preview"
-        >
-          &times;
-        </button>
-
-      </div>
-
-      <div class="pdf-frame-container">
-        <iframe
-          id="pdfFrame"
-          title="Question paper PDF preview"
-        ></iframe>
-      </div>
-
-      <div class="pdf-modal-footer">
-
-        <span>Happy practising! ✦</span>
-
-        <a id="pdfDownload" href="#">
-          Download PDF ↓
-        </a>
-
-      </div>
-
+  <div id="pdfModal" class="pdf-modal" aria-hidden="true">
+    <div class="pdf-dialog" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
+      <header class="pdf-header"><div class="pdf-heading-icon">▤</div><div class="pdf-heading-copy"><span>EDUSPHERE DOCUMENT VIEWER</span><h3 id="pdfTitle">Question paper preview</h3></div><a id="pdfOpenNew" class="pdf-open-new" href="#" target="_blank" rel="noopener">Open in new tab ↗</a><button id="closePdf" class="pdf-close" type="button" aria-label="Close preview">×</button></header>
+      <div class="pdf-loading" id="pdfLoading"><span class="loader"></span><p>Preparing document…</p></div>
+      <iframe id="pdfFrame" title="Question paper PDF preview"></iframe>
+      <footer class="pdf-footer"><span>Take your time. You've got this.</span><a id="pdfDownload" href="#" target="_blank" rel="noopener">Download PDF ↓</a></footer>
     </div>
-
   </div>
-
-  <!-- JAVASCRIPT -->
-  <script src="assets/app.js?v=2" defer></script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="assets/app.js?v=3" defer></script>
 </body>
 </html>
